@@ -1,0 +1,198 @@
+@model NuvAsk.Models.AskQuestion
+@{
+    ViewBag.Title = "AskQuestion";
+        switch (Convert.ToInt32(Session["userTypeId"]))
+        {
+            case 1://Admin
+                Layout = "~/Views/Shared/_AdminMasterPage.cshtml";
+                break;
+            case 2://Company Admin
+                Layout = "~/Views/Shared/_CompanyAdminMaster.cshtml";
+                break;
+            case 3://Employee
+                Layout = "~/Views/Shared/_EmployeeMasterPage.cshtml";
+                break;
+        }
+    
+}
+<head>
+    <script type="text/javascript">
+       
+        $(document).ready(function () {
+            $('#lblLimit').hide();
+
+            $("#employeeForm").validate({
+                ignore: [],
+                debug: false,
+                rules: {
+                        cktext:{
+                            required: function () {
+                                CKEDITOR.instances.cktext.updateElement();
+                            },
+                            minlength: 10
+                        },
+                        NameTitle: { 
+                            required:true,
+                            maxlength:200
+                        },
+                        Nametag: "required",
+                },
+                messages: {
+                    NameTitle: {
+                        required: "Title Is Required",
+                        maxlength: "Title cannot be longer than 200 characters"
+                    }
+                    ,
+                        Nametag: "Please Select Atleast One Tag",
+                        cktext: {
+                            required: "Please Enter Body Contents",
+                            minlength: "Please enter 10 characters"
+                        }
+                    }
+                });
+
+            $("#post").click(function () {
+                $('#title').val(($.trim($('#title').val())));
+                var contents =CKEDITOR.instances.cktext.getData();
+                if($("#employeeForm").valid())
+                {
+                    if (parseInt($('#screenShot').get(0).files.length) <= 3) {
+                        var title = $("#title").val();
+                        var tagIds = $("#tag").val();
+                        tagIds = tagIds + ',';
+
+                        var formData = new FormData();
+                        var file = $("#screenShot").get(0).files;
+                        if (file.length > 0) {
+                            for (var i = 0; i < file.length; i++)
+                            {
+                                formData.append("screenShot", file[i]);
+                            }
+                        }
+                        formData.append("title", title);
+                        formData.append("tagIds", tagIds);
+                        formData.append("contents", contents);
+
+                        $.ajax({
+                            type: "POST",
+                            url: "/EmployeeHome/PostQuestion",
+                            data: formData,
+                            contentType: false,
+                            processData: false,
+                            success: function (response) {
+                                bootbox.alert({
+                                    size: "medium",
+                                    message: "<b>Successfully Posted</b>",
+                                    callback: function () { window.location.href = '@Url.Action("AskQuestion", "EmployeeHome")'; }
+                                })
+                            },
+                            failure: function (response) {
+                                bootbox.alert("Process failed!! Please try again.");
+                            },
+                            error: function (response) {
+                                bootbox.alert("Error!! Sorry for your inconvinience.");
+                            }
+                        });
+                    }
+                    else {
+                            $('#lblLimit').show();
+                    }
+            }
+        });
+        });
+    </script>
+
+</head>
+@using (Html.BeginForm("AskQuestion", "EmployeeHome", FormMethod.Post, new { id = "employeeForm", @class = "form-horizontal", role = "form", enctype = "multipart/form-data", name = "AskQuestion" }))
+{
+
+    @Html.AntiForgeryToken()
+
+    <h3 class="QuestionTitle"><strong>Ask Question</strong></h3>
+    <div class="QuestionDiv">
+        <div class="PostRow row">
+            <div class="col-md-12">
+                <div class="form-group">
+                    <strong>Title</strong>
+                    <input type="text" id="title" name="NameTitle" placeholder="Enter Title" class="form-control" />
+                                      
+                </div>
+                <div class="form-group" id="editor">
+                    <strong>Body</strong>
+                    <br />
+                    <textarea class="ckeditor" name="cktext" id="cktext"></textarea>
+                </div>
+                <div class="form-group">
+                    <strong>Tags</strong>
+                    <input type="text" id="tag" name="Nametag" placeholder="Enter tags such as (asp.net,javascript)" class="form-control" />
+                </div>
+                <div class="form-group">
+                    <label>Add Image</label> <br/>
+                    <input type="file" class="form-control-file ImageFile" id="screenShot" aria-describedby="fileHelp" accept="image/jpeg, image/png" multiple="multiple" >
+                    <label id="lblLimit" class="ImageWarning">only 5 images can be uploaded </label><br/>
+                    <small id="fileHelp" class="form-text text-muted">Choose a sample screen shot</small>
+                </div>
+
+                @*<div class="form-control">*@
+                @*<div class="controls">
+                <div class="entry input-group col-xs-3">
+                <input class="btn btn-primary" id="fileMultiple" name="fields[]" type="file" 	style="margin-left: -15px;background-color: #090909;" multiple="multiple">
+                        <span class="input-group-btn">
+                            <button class="btn btn-success btn-add" type="button">
+                                <span class="glyphicon glyphicon-plus"></span>
+                            </button>
+                        </span>
+                 </div>
+                </div>*@
+                @*</div>*@
+
+                <div class="form-group">
+                    <input type="button" id="post" class="btn btn-default PostButton" value="Post Your Question"/>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+@if (ViewBag.Message != null)
+{
+    <script type="text/javascript">
+
+        window.onload = function () {
+            bootbox.alert({
+                size: "medium",
+                message: "<b>Successfully Registered</b>",
+                callback: function () { window.location.href = '@Url.Action("AskQuestion", "EmployeeHome")'; }
+            })
+        };
+    </script>
+}
+<script type="text/javascript">
+    $(document).ready(function () {
+        $.ajax({
+            url: '/EmployeeHome/SearchWithName/',
+            dataType: 'json',
+            success: function (data) {
+                var tagObjects = JSON.parse(data);
+
+                $("#tag").tokenInput(tagObjects, {
+                    theme: "facebook",
+                    crossDomain: false,
+                    preventDuplicates: true
+                });
+                $("ul.token-input-list-facebook").height(20 + "px");
+            }
+        });
+
+    });
+</script>
+@section Scripts {
+    @Scripts.Render("~/bundles/jqueryval")
+}
+
+
+
+
+
+
+
+
